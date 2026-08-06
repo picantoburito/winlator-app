@@ -144,14 +144,14 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
         switch (actionMasked) {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
-                if (event.isFromSource(InputDevice.SOURCE_MOUSE)) return true;
+                if (isLikelyPhysicalTouchpadEvent(event)) return true;
                 scrollAccumY = 0;
                 scrolling = false;
                 fingers[pointerId] = new Finger(event.getX(actionIndex), event.getY(actionIndex));
                 numFingers++;
                 break;
             case MotionEvent.ACTION_MOVE:
-                if (event.isFromSource(InputDevice.SOURCE_MOUSE)) {
+                if (isLikelyPhysicalTouchpadEvent(event)) {
                     float[] transformedPoint = XForm.transformPoint(xform, event.getX(), event.getY());
                     if (isEnabled()) xServer.injectPointerMove((int)transformedPoint[0], (int)transformedPoint[1]);
                 }
@@ -355,7 +355,7 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
 
     public boolean onExternalMouseEvent(MotionEvent event) {
         boolean handled = false;
-        if (isEnabled() && event.isFromSource(InputDevice.SOURCE_MOUSE)) {
+        if (isEnabled() && isLikelyPhysicalTouchpadEvent(event)) {
             int actionButton = event.getActionButton();
             switch (event.getAction()) {
                 case MotionEvent.ACTION_BUTTON_PRESS:
@@ -431,4 +431,28 @@ public class TouchpadView extends View implements View.OnCapturedPointerListener
             return onExternalMouseEvent(event);
         }
     }
+
+    private boolean isLikelyPhysicalTouchpadEvent(MotionEvent event) {
+        final int source = event.getSource();
+
+        if ((source & InputDevice.SOURCE_MOUSE) == InputDevice.SOURCE_MOUSE) return true;
+        if ((source & InputDevice.SOURCE_TOUCHPAD) == InputDevice.SOURCE_TOUCHPAD) return true;
+
+        final int action = event.getActionMasked();
+        if (action == MotionEvent.ACTION_HOVER_MOVE ||
+            action == MotionEvent.ACTION_SCROLL ||
+            event.getButtonState() != 0) {
+            return true;
+        }
+
+        try {
+            if (event.getPointerCount() > 0 &&
+                event.getToolType(0) == MotionEvent.TOOL_TYPE_MOUSE) {
+                return true;
+            }
+        } catch (Throwable ignored) {}
+
+        return false;
+    }
+
 }
