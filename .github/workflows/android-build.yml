@@ -28,6 +28,9 @@ jobs:
       - name: Accept licenses
         run: yes | sdkmanager --licenses || true
 
+      - name: Install CMake
+        run: sdkmanager "cmake;3.22.1"
+
       - name: Ensure gradlew executable
         run: chmod +x ./gradlew
 
